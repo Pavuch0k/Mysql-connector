@@ -1,7 +1,16 @@
+# Игнорировать всё по умолчанию
 *
+
+# Исключения - разрешаем только нужные файлы
 !.gitignore
 !app.py
 !requirements.txt
 !setup.sh
 !static/
 !templates/
+
+# Явно игнорируем конфиденциальные файлы
+db_config.json
+venv/
+*.pyc
+__pycache__/

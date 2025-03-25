@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление направлениями</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            font-size: 1rem;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+        }
+        th {
+            background: rgba(255, 255, 255, 0.2);
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        tr:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .action-button {
+            display: inline-block;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        .action-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #fff;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 400px;
+            border-radius: 10px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+        .modal-content h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .modal-content label {
+            display: block;
+            margin: 10px 0 5px;
+            color: #555;
+        }
+        .modal-content input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .modal-content button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .modal-content button:hover {
+            background-color: #218838;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Управление направлениями</h1>
+    <a href="/" class="back-button">Вернуться на главную</a>
+    <div id="app">
+        <table id="directions-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Техническое название</th>
+                    <th>Валюта (Give)</th>
+                    <th>Валюта (Get)</th>
+                    <th>Новый парсер</th>
+                    <th>Действие нового парсера</th>
+                    <th>Статус</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Данные будут вставлены сюда -->
+            </tbody>
+        </table>
+    </div>
+
+    <div id="editDirectionModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Редактирование направления</h2>
+            <form id="editDirectionForm">
+                <input type="hidden" id="directionId" name="id">
+                <label for="techName">Техническое название:</label>
+                <input type="text" id="techName" name="tech_name" required><br>
+                <label for="newParser">Новый парсер:</label>
+                <input type="text" id="newParser" name="new_parser" required><br>
+                <label for="newActionParserGet">Действие нового парсера:</label>
+                <input type="text" id="newActionParserGet" name="new_action_parser_get" required><br>
+                <button type="submit">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        async function updateData() {
+            try {
+                const response = await fetch('/api/directions');
+                const data = await response.json();
+
+                const tbody = document.querySelector('#directions-table tbody');
+                tbody.innerHTML = data.map(row => `
+                    <tr>
+                        <td>${row.id}</td>
+                        <td>${row.tech_name}</td>
+                        <td>${row.currency_give}</td>
+                        <td>${row.currency_get}</td>
+                        <td>${row.new_parser}</td>
+                        <td>${row.new_parser_actions_get}</td> <!-- Исправлено здесь -->
+                        <td>
+                            <div class="toggle-switch" onclick="toggleDirectionStatus(${row.id}, this)">
+                                <div class="slider ${row.direction_status === 1 ? 'active' : ''}"></div>
+                                <span>${row.direction_status === 1 ? 'Вкл' : 'Выкл'}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="action-button" onclick="openEditDirectionModal(${row.id})">Изменить</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Ошибка при загрузке данных:', error);
+            }
+        }
+
+        async function toggleDirectionStatus(id, element) {
+            const slider = element.querySelector('.slider');
+            const span = element.querySelector('span');
+            const newStatus = !slider.classList.contains('active');
+
+            try {
+                const response = await fetch(`/api/directions/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ direction_status: newStatus ? 1 : 0 })
+                });
+
+                if (response.ok) {
+                    slider.classList.toggle('active', newStatus);
+                    span.textContent = newStatus ? 'Вкл' : 'Выкл';
+                } else {
+                    throw new Error('Ошибка сервера');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Не удалось изменить статус');
+                slider.classList.toggle('active', !newStatus);
+            }
+        }
+
+        setInterval(updateData, 1000);
+        updateData();
+
+        function openEditDirectionModal(id) {
+            const modal = document.getElementById('editDirectionModal');
+            modal.style.display = 'block';
+
+            fetch(`/api/directions/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('directionId').value = data.id;
+                    document.getElementById('techName').value = data.tech_name;
+                    document.getElementById('newParser').value = data.new_parser;
+                    document.getElementById('newActionParserGet').value = data.new_action_parser_get;
+                });
+        }
+
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('close') || event.target === document.getElementById('editDirectionModal')) {
+                document.getElementById('editDirectionModal').style.display = 'none';
+            }
+        });
+
+        document.getElementById('editDirectionForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+            const directionId = formData.get('id');
+            const updatedData = {
+                tech_name: formData.get('tech_name'),
+                new_parser: formData.get('new_parser'),
+                new_action_parser_get: formData.get('new_action_parser_get')
+            };
+
+            try {
+                const response = await fetch(`/api/directions/${directionId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+
+                if (response.ok) {
+                    alert('Направление успешно обновлено');
+                    document.getElementById('editDirectionModal').style.display = 'none';
+                    updateData();
+                } else {
+                    alert('Ошибка при обновлении направления');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+            }
+        });
+    </script>
+</body>
+</html>
